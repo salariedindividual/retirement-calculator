@@ -152,15 +152,22 @@ def main():
         # Customizable Expenses
         st.subheader("Customize Monthly Expenses")
         default_costs = calc.city_costs[city_tier]
+        
+        scaling = family_size / 3
+        adj_costs = dict(default_costs)  # start with base
 
-        custom_rent = st.number_input("Rent (₹)", 0, 50000, default_costs["rent"])
-        custom_groceries = st.number_input("Groceries (₹)", 0, 50000, default_costs["groceries"])
-        custom_utilities = st.number_input("Utilities (₹)", 0, 20000, default_costs["utilities"])
+        adj_costs["groceries"] = int(default_costs["groceries"] * scaling)
+        adj_costs["utilities"] = int(default_costs["utilities"] * scaling * 0.8)
+        adj_costs["miscellaneous"] = int(default_costs["miscellaneous"] * scaling * 0.9)
+
+        custom_rent = st.number_input("Rent (₹)", 0, 50000, 0 if own_house else default_costs["rent"], disabled=own_house)
+        custom_groceries = st.number_input("Groceries (₹)", 0, 50000, adj_costs["groceries"])
+        custom_utilities = st.number_input("Utilities (₹)", 0, 20000, adj_costs["utilities"])
         custom_transportation = st.number_input("Transportation (₹)", 0, 30000, default_costs["transportation"])
         custom_healthcare = st.number_input("Healthcare (₹)", 0, 20000, default_costs["healthcare"])
         custom_entertainment = st.number_input("Entertainment (₹)", 0, 30000, default_costs["entertainment"])
         custom_education = st.number_input("Education per Child (₹)", 0, 50000, default_costs["education_child"])
-        custom_miscellaneous = st.number_input("Miscellaneous (₹)", 0, 20000, default_costs["miscellaneous"])
+        custom_miscellaneous = st.number_input("Miscellaneous (₹)", 0, 20000, adj_costs["miscellaneous"])
 
         # EMI Section
         st.subheader("EMI & Loans")
@@ -235,9 +242,11 @@ def main():
         remaining_corpus_needed = max(total_required_corpus - future_value_current_corpus, 0)
 
         # Calculate SIP requirements based on remaining corpus needed
+        sip_expected = calc.calculate_sip_required(remaining_corpus_needed, years_to_retirement, expected_return)
         sip_conservative = calc.calculate_sip_required(remaining_corpus_needed, years_to_retirement, 0.08)
         sip_moderate = calc.calculate_sip_required(remaining_corpus_needed, years_to_retirement, 0.10)
-        sip_aggressive = calc.calculate_sip_required(remaining_corpus_needed, years_to_retirement, expected_return)
+        sip_aggressive = calc.calculate_sip_required(remaining_corpus_needed, years_to_retirement, 0.12)
+        
 
         # Additional funds calculation
         total_child_funds = (child_education_fund + child_wedding_fund) * children_count
@@ -297,7 +306,7 @@ def main():
 
         # SIP Requirements (Updated to show reduced amounts)
         st.subheader("Monthly SIP Requirements (After Considering Current Corpus)")
-        sip_col1, sip_col2, sip_col3 = st.columns(3)
+        sip_col1, sip_col2, sip_col3, sip_col4 = st.columns(4)
 
         with sip_col1:
             st.metric("Conservative (8%)", f"₹{sip_conservative:,.0f}")
@@ -305,6 +314,8 @@ def main():
             st.metric("Moderate (10%)", f"₹{sip_moderate:,.0f}")
         with sip_col3:
             st.metric("Aggressive (12%+)", f"₹{sip_aggressive:,.0f}")
+        with sip_col4:
+            st.metric(f"For Your Expected Returns ({expected_return*100}%)", f"₹{sip_expected:,.0f}")
 
         if current_retirement_corpus > 0:
             st.info(f"💰 SIP amounts are reduced because your current ₹{current_retirement_corpus:,} will grow to ₹{future_value_current_corpus/10000000:.2f} crores by retirement!")
